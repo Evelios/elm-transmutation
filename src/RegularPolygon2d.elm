@@ -1,8 +1,8 @@
 module RegularPolygon2d exposing
     ( RegularPolygon2d
     , from, fromUnsafe
-    , sides, radius, angle, position
-    , scale
+    , sides, radius, angle, position, exteriorAngle
+    , scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
     )
 
 {-| A 2d regular polygon module. Regular polygons are polygons with a certain number of vertices and sides where all
@@ -21,10 +21,12 @@ the sides are equal length and the internal angles are equivalent.
 
 # Accessors
 
-@docs sides, radius, angle, position
+@docs sides, radius, angle, position, exteriorAngle
 
 
 # Modifiers
+
+@docs scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
 
 @ docs scale
 
@@ -129,14 +131,47 @@ position polygon =
             records.position
 
 
+{-| Get the exterior angle of a polygon. The exterior angle is the angle amount between two of the external vertices.
+The sum of all the exterior angles should be 360 degrees, so the exterior angle is 360/n degrees where n is the number
+of sides of the regular polygon.
+-}
+exteriorAngle : RegularPolygon2d units coordinates -> Angle
+exteriorAngle polygon =
+    Quantity.divideBy (toFloat <| sides polygon) (Angle.radians <| 2 * pi)
+
+
 
 -------- Modifiers
 
 
-{-| Scale this polygon about the center of the regular polygon.
+{-| Scale the regular polygon about the center point.
 -}
 scale : Float -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
 scale amount polygon =
     case polygon of
         RegularPolygon2d records ->
             fromUnsafe { records | radius = Quantity.multiplyBy amount records.radius }
+
+
+{-| Rotate the regular polygon about the center point.
+-}
+rotate : Angle -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+rotate amount polygon =
+    case polygon of
+        RegularPolygon2d records ->
+            fromUnsafe { records | angle = Quantity.plus amount records.angle }
+
+
+{-| Rotate the regular polygon relative to the exterior angle. The exterior angle is the angle of each individual wedge
+of the polygon. The wedge is the arc between vertices. Rotation of 1.0 is rotating one of the exterior angles.
+-}
+rotateRelativeToExteriorAngle : Float -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+rotateRelativeToExteriorAngle amount polygon =
+    rotate (Quantity.multiplyBy amount <| exteriorAngle polygon) polygon
+
+
+{-| Rotate the polygon a half of the exterior angle.
+-}
+rotateHalfExteriorAngle : RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+rotateHalfExteriorAngle =
+    rotateRelativeToExteriorAngle 0.5

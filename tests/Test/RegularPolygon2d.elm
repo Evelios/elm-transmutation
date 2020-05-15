@@ -1,7 +1,7 @@
 module Test.RegularPolygon2d exposing (..)
 
 import Angle
-import Expect exposing (Expectation)
+import Expect exposing (Expectation, FloatingPointTolerance(..))
 import Length
 import Point2d
 import RegularPolygon2d
@@ -60,35 +60,8 @@ from =
         ]
 
 
-scale : Test
-scale =
-    describe "Scaling regular polygon"
-        [ test "by 2 should return radius twice the original" <|
-            \_ ->
-                let
-                    actual =
-                        RegularPolygon2d.fromUnsafe
-                            { sides = 3
-                            , radius = Length.meters 3
-                            , angle = Angle.degrees 0
-                            , position = Point2d.origin
-                            }
-                            |> RegularPolygon2d.scale 2
-
-                    expected =
-                        RegularPolygon2d.fromUnsafe
-                            { sides = 3
-                            , radius = Length.meters 6
-                            , angle = Angle.degrees 0
-                            , position = Point2d.origin
-                            }
-                in
-                Expect.equal actual expected
-        ]
-
-
-accessors : Test
-accessors =
+basicAccessors : Test
+basicAccessors =
     let
         sides =
             3
@@ -127,4 +100,127 @@ accessors =
             \_ ->
                 RegularPolygon2d.position polygon
                     |> Expect.equal position
+        ]
+
+
+exteriorAngle : Test
+exteriorAngle =
+    describe "The exterior angle"
+        [ test "should be 120 degrees for a triangle" <|
+            \_ ->
+                let
+                    actual =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                            |> RegularPolygon2d.exteriorAngle
+                in
+                actual |> Expect.equal (Angle.degrees 120)
+        , test "should be 60 degrees for a hexagon" <|
+            \_ ->
+                let
+                    actual =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 6
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                            |> RegularPolygon2d.exteriorAngle
+                in
+                actual |> Expect.equal (Angle.degrees 60)
+        ]
+
+
+scale : Test
+scale =
+    describe "Scaling regular polygon"
+        [ test "by 2 should return radius twice the original" <|
+            \_ ->
+                let
+                    actual =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                            |> RegularPolygon2d.scale 2
+
+                    expected =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 6
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                in
+                Expect.equal actual expected
+        ]
+
+
+rotateRelativeToExteriorAngle : Test
+rotateRelativeToExteriorAngle =
+    describe "Rotating relative to the exterior angle"
+        [ test "should rotate 1/3 or 40 degrees for a triangle" <|
+            \_ ->
+                let
+                    actual =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                            |> RegularPolygon2d.rotateRelativeToExteriorAngle (1.0 / 3.0)
+
+                    expected =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 40
+                            , position = Point2d.origin
+                            }
+
+                    toRadians polygon =
+                        polygon
+                            |> RegularPolygon2d.angle
+                            |> Angle.inDegrees
+                in
+                Expect.within (Absolute 0.001) (toRadians actual) (toRadians expected)
+        ]
+
+
+rotateHalfExteriorAngle : Test
+rotateHalfExteriorAngle =
+    describe "Rotating half an exterior angle"
+        [ test "should rotate 60 degrees for a triangle" <|
+            \_ ->
+                let
+                    actual =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                            |> RegularPolygon2d.rotateHalfExteriorAngle
+
+                    expected =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 60
+                            , position = Point2d.origin
+                            }
+
+                    toRadians polygon =
+                        polygon
+                            |> RegularPolygon2d.angle
+                            |> Angle.inDegrees
+                in
+                Expect.within (Absolute 0.001) (toRadians actual) (toRadians expected)
         ]
