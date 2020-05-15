@@ -2,6 +2,7 @@ module RegularPolygon2d exposing
     ( RegularPolygon2d
     , from, fromUnsafe
     , sides, radius, angle, position
+    , scale
     )
 
 {-| A 2d regular polygon module. Regular polygons are polygons with a certain number of vertices and sides where all
@@ -21,6 +22,11 @@ the sides are equal length and the internal angles are equivalent.
 # Accessors
 
 @docs sides, radius, angle, position
+
+
+# Modifiers
+
+@ docs scale
 
 -}
 
@@ -121,3 +127,16 @@ position polygon =
     case polygon of
         RegularPolygon2d records ->
             records.position
+
+
+
+-------- Modifiers
+
+
+{-| Scale this polygon about the center of the regular polygon.
+-}
+scale : Float -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+scale amount polygon =
+    case polygon of
+        RegularPolygon2d records ->
+            fromUnsafe { records | radius = Quantity.multiplyBy amount records.radius }

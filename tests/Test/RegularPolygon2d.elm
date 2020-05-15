@@ -60,6 +60,33 @@ from =
         ]
 
 
+scale : Test
+scale =
+    describe "Scaling regular polygon"
+        [ test "by 2 should return radius twice the original" <|
+            \_ ->
+                let
+                    actual =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 3
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                            |> RegularPolygon2d.scale 2
+
+                    expected =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 3
+                            , radius = Length.meters 6
+                            , angle = Angle.degrees 0
+                            , position = Point2d.origin
+                            }
+                in
+                Expect.equal actual expected
+        ]
+
+
 accessors : Test
 accessors =
     let
