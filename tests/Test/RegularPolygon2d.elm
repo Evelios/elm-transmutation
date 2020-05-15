@@ -58,3 +58,46 @@ from =
                     }
                     |> nothing
         ]
+
+
+accessors : Test
+accessors =
+    let
+        sides =
+            3
+
+        radius =
+            Length.meters 3
+
+        angle =
+            Angle.degrees 0
+
+        position =
+            Point2d.origin
+
+        polygon =
+            RegularPolygon2d.fromUnsafe
+                { sides = sides
+                , radius = radius
+                , angle = angle
+                , position = position
+                }
+    in
+    describe "Regular polygon accessors"
+        [ test "should be able to get sides" <|
+            \_ ->
+                RegularPolygon2d.sides polygon
+                    |> Expect.equal sides
+        , test "should be able to get radius" <|
+            \_ ->
+                RegularPolygon2d.radius polygon
+                    |> Expect.equal radius
+        , test "should be able to get angle" <|
+            \_ ->
+                RegularPolygon2d.angle polygon
+                    |> Expect.equal angle
+        , test "should be able to get position" <|
+            \_ ->
+                RegularPolygon2d.position polygon
+                    |> Expect.equal position
+        ]
