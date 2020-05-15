@@ -1,0 +1,4 @@
+{
+  "root": "../src",
+  "tests": ["RegularPolygon2d"]
+}
