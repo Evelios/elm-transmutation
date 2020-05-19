@@ -1,7 +1,7 @@
 module RegularPolygon2d exposing
     ( RegularPolygon2d
     , from, fromUnsafe
-    , sides, radius, angle, position, exteriorAngle
+    , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle
     , scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
     )
 
@@ -21,7 +21,7 @@ the sides are equal length and the internal angles are equivalent.
 
 # Accessors
 
-@docs sides, radius, angle, position, exteriorAngle
+@docs sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle
 
 
 # Modifiers
@@ -33,8 +33,10 @@ the sides are equal length and the internal angles are equivalent.
 -}
 
 import Angle exposing (Angle)
+import List.Util
 import Point2d exposing (Point2d)
 import Quantity exposing (Quantity)
+import Vector2d
 
 
 
@@ -46,7 +48,7 @@ type RegularPolygon2d units coordinates
         { sides : Int
         , radius : Quantity Float units
         , angle : Angle
-        , position : Point2d units coordinates
+        , center : Point2d units coordinates
         }
 
 
@@ -66,7 +68,7 @@ somewhere in the 2d plane.
         { sides = 5
         , radius = Length.meters 3
         , angle = Angle.degrees 10
-        , position = Point2d.origin
+        , center = Point2d.origin
         }
 
 -}
@@ -74,7 +76,7 @@ from :
     { sides : Int
     , radius : Quantity Float units
     , angle : Angle
-    , position : Point2d units coordinates
+    , center : Point2d units coordinates
     }
     -> Maybe (RegularPolygon2d units coordinates)
 from properties =
@@ -92,11 +94,11 @@ fromUnsafe :
     { sides : Int
     , radius : Quantity Float units
     , angle : Angle
-    , position : Point2d units coordinates
+    , center : Point2d units coordinates
     }
     -> RegularPolygon2d units coordinates
-fromUnsafe =
-    RegularPolygon2d
+fromUnsafe properties =
+    RegularPolygon2d { properties | radius = Quantity.abs properties.radius }
 
 
 
@@ -117,6 +119,11 @@ radius polygon =
             records.radius
 
 
+internalRadius : RegularPolygon2d units coordinates -> Quantity Float units
+internalRadius polygon =
+    Quantity.multiplyBy (Angle.sin <| Quantity.half <| exteriorAngle polygon) (radius polygon)
+
+
 angle : RegularPolygon2d units coordinates -> Angle
 angle polygon =
     case polygon of
@@ -124,11 +131,47 @@ angle polygon =
             records.angle
 
 
-position : RegularPolygon2d units coordinates -> Point2d units coordinates
-position polygon =
+center : RegularPolygon2d units coordinates -> Point2d units coordinates
+center polygon =
     case polygon of
         RegularPolygon2d records ->
-            records.position
+            records.center
+
+
+{-| Helper function for the vertices and midpoints.
+-}
+pointsWithRadiusAndAngle : Quantity Float units -> Angle -> RegularPolygon2d units coordinates -> List (Point2d units coordinates)
+pointsWithRadiusAndAngle theRadius theAngle polygon =
+    let
+        angles =
+            List.Util.linspace (sides polygon) 0 (2 * pi - (Angle.inRadians <| exteriorAngle polygon))
+                |> List.map Angle.radians
+
+        initialPoint =
+            Point2d.translateBy (Vector2d.rTheta theRadius theAngle) (center polygon)
+    in
+    angles
+        |> List.map (\currentAngle -> Point2d.rotateAround (center polygon) currentAngle initialPoint)
+
+
+{-| Get the vertices of the polygon. The first vertex is the point that is at the angle of the polygon. The vertices
+go counter clockwise around the polygon.
+-}
+vertices : RegularPolygon2d units coordinates -> List (Point2d units coordinates)
+vertices polygon =
+    pointsWithRadiusAndAngle (radius polygon) (angle polygon) polygon
+
+
+{-| Get the midpoints of the polygon vertices. The first vertex is the point that is at the angle of the polygon. The
+midpoints go counter clockwise around the polygon.
+-}
+midpoints : RegularPolygon2d units coordinates -> List (Point2d units coordinates)
+midpoints polygon =
+    let
+        startingAngle =
+            angle polygon |> Quantity.plus (Quantity.half (exteriorAngle polygon))
+    in
+    pointsWithRadiusAndAngle (internalRadius polygon) startingAngle polygon
 
 
 {-| Get the exterior angle of a polygon. The exterior angle is the angle amount between two of the external vertices.
