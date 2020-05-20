@@ -3,15 +3,22 @@ module Main exposing (main)
 import AspectRatio
 import Browser
 import Browser.Dom
+import Color
+import Geometry.Svg
 import Html exposing (Html)
 import Html.Attributes
 import Pixels exposing (Pixels)
+import Point2d
 import Quantity
+import RegularPolygon2d
 import Size exposing (Size)
-import Svg exposing (Svg)
 import Task
+import Transmutation
 import TypedSvg
 import TypedSvg.Attributes
+import TypedSvg.Attributes.InPx
+import TypedSvg.Types exposing (Paint(..))
+import Visualize
 
 
 type Msg
@@ -72,12 +79,37 @@ view model =
         aspectRatio =
             AspectRatio.fromSize model.view
 
+        center =
+            Point2d.xy (Quantity.float <| AspectRatio.x aspectRatio / 2) (Quantity.float <| AspectRatio.y aspectRatio / 2)
+
+        radius =
+            Quantity.float <| 0.4 * min (AspectRatio.x aspectRatio) (AspectRatio.y aspectRatio)
+
+        startingPolygon =
+            RegularPolygon2d.fromUnsafe
+                { sides = 5
+                , radius = radius
+                , center = center
+                , angle = Quantity.zero
+                }
+
+        startingPolygonSvg =
+            startingPolygon
+                |> RegularPolygon2d.asPolygon2d
+                |> Geometry.Svg.polygon2d
+                    [ TypedSvg.Attributes.stroke <| Paint Color.black
+                    , TypedSvg.Attributes.InPx.strokeWidth 0.01
+                    , TypedSvg.Attributes.noFill
+                    ]
+
         svg =
             TypedSvg.svg
                 [ TypedSvg.Attributes.viewBox 0 0 aspectRatio.x aspectRatio.y
                 , Html.Attributes.style "width" "100%"
                 , Html.Attributes.style "height" "100%"
                 ]
-                []
+                [ startingPolygonSvg
+                , Visualize.transmutation <| Transmutation.cross startingPolygon
+                ]
     in
     Html.div [] [ svg ]

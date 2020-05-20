@@ -1,4 +1,4 @@
-module Geometry exposing (Geometry)
+module Geometry exposing (Geometry(..))
 
 {-| -}
 

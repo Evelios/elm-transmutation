@@ -29,3 +29,18 @@ linspace =
                 List.Util.linspace 6 0 1
                     |> Expect.equal [ 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 ]
         ]
+
+
+rotateLeft : Test
+rotateLeft =
+    test "rotateLeft" <|
+        \_ ->
+            let
+                expected =
+                    [ 2, 3, 1 ]
+
+                result =
+                    [ 1, 2, 3 ]
+                        |> List.Util.rotateLeft 1
+            in
+            Expect.equal expected result

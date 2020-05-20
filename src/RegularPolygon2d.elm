@@ -2,6 +2,7 @@ module RegularPolygon2d exposing
     ( RegularPolygon2d
     , from, fromUnsafe
     , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle
+    , asPolygon2d
     , scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
     )
 
@@ -24,6 +25,11 @@ the sides are equal length and the internal angles are equivalent.
 @docs sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle
 
 
+# Conversions
+
+@docs asPolygon2d
+
+
 # Modifiers
 
 @docs scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
@@ -35,6 +41,7 @@ the sides are equal length and the internal angles are equivalent.
 import Angle exposing (Angle)
 import List.Util
 import Point2d exposing (Point2d)
+import Polygon2d exposing (Polygon2d)
 import Quantity exposing (Quantity)
 import Vector2d
 
@@ -121,7 +128,7 @@ radius polygon =
 
 internalRadius : RegularPolygon2d units coordinates -> Quantity Float units
 internalRadius polygon =
-    Quantity.multiplyBy (Angle.sin <| Quantity.half <| exteriorAngle polygon) (radius polygon)
+    Quantity.multiplyBy (Angle.cos <| Quantity.half <| exteriorAngle polygon) (radius polygon)
 
 
 angle : RegularPolygon2d units coordinates -> Angle
@@ -181,6 +188,15 @@ of sides of the regular polygon.
 exteriorAngle : RegularPolygon2d units coordinates -> Angle
 exteriorAngle polygon =
     Quantity.divideBy (toFloat <| sides polygon) (Angle.radians <| 2 * pi)
+
+
+
+-------- Conversions
+
+
+asPolygon2d : RegularPolygon2d units coordinates -> Polygon2d units coordinates
+asPolygon2d regularPolygon =
+    Polygon2d.singleLoop <| vertices regularPolygon
 
 
 

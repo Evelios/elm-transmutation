@@ -101,7 +101,7 @@ internalRadius =
                     expected =
                         Length.meters <| (1 / sqrt 2)
                 in
-                Expect.equal expected actual
+                Expect.quantityWithin (Length.meters 0.001) expected actual
         ]
 
 
