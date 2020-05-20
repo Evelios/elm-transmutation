@@ -1,7 +1,7 @@
 module RegularPolygon2d exposing
     ( RegularPolygon2d
     , from, fromUnsafe
-    , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle
+    , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength
     , asPolygon2d
     , scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
     )
@@ -22,7 +22,7 @@ the sides are equal length and the internal angles are equivalent.
 
 # Accessors
 
-@docs sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle
+@docs sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength
 
 
 # Conversions
@@ -143,6 +143,12 @@ center polygon =
     case polygon of
         RegularPolygon2d records ->
             records.center
+
+
+{-| -}
+edgeLength : RegularPolygon2d units coordinates -> Quantity Float units
+edgeLength polygon =
+    Quantity.twice <| Quantity.multiplyBy (Angle.sin <| Quantity.half <| exteriorAngle polygon) (radius polygon)
 
 
 {-| Helper function for the vertices and midpoints.

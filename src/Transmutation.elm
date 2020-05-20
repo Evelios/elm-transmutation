@@ -1,4 +1,4 @@
-module Transmutation exposing (Transmutation, cross, geometry)
+module Transmutation exposing (Transmutation, cross, getGeometry, vertexFork)
 
 {-|
 
@@ -10,7 +10,7 @@ module Transmutation exposing (Transmutation, cross, geometry)
 
 # Accessors
 
-@ geometry
+@ getGeometry
 
 
 # Transmutation functions
@@ -19,22 +19,20 @@ module Transmutation exposing (Transmutation, cross, geometry)
 
 -}
 
+import Circle2d
 import Geometry exposing (Geometry(..))
 import LineSegment2d
 import List.Extra
 import List.Util
 import Point2d exposing (Point2d)
+import Quantity
 import RegularPolygon2d exposing (RegularPolygon2d)
 
 
 {-| -}
 type Transmutation units coordinates
     = Terminal (List (Geometry units coordinates))
-    | Transmutation (List (Geometry units coordinates)) (Node units coordinates) (List (Node units coordinates))
-
-
-type Node units coordinates
-    = Node (RegularPolygon2d units coordinates) (Transmutation units coordinates)
+    | Fork (List (Geometry units coordinates)) (List (Transmutation units coordinates))
 
 
 
@@ -51,8 +49,8 @@ fork :
     , external : List (Transmutation units coordinates)
     }
     -> Transmutation units coordinates
-fork _ =
-    terminal []
+fork { geometry, external } =
+    Fork geometry external
 
 
 
@@ -61,14 +59,14 @@ fork _ =
 
 {-| Get the geometry from this level of the transmutation.
 -}
-geometry : Transmutation units coordinates -> List (Geometry units coordinates)
-geometry transmutation =
+getGeometry : Transmutation units coordinates -> List (Geometry units coordinates)
+getGeometry transmutation =
     case transmutation of
-        Terminal theGeometry ->
-            theGeometry
+        Terminal geometry ->
+            geometry
 
-        _ ->
-            []
+        Fork geometry forkTransmutation ->
+            List.append geometry <| List.concat <| List.map getGeometry forkTransmutation
 
 
 
@@ -88,3 +86,24 @@ cross polygon =
                 |> List.map Line
     in
     terminal internalGeometry
+
+
+vertexFork : RegularPolygon2d units coordinates -> Transmutation units coordinates
+vertexFork polygon =
+    let
+        createPolygon vertex =
+            RegularPolygon2d.fromUnsafe
+                { sides = RegularPolygon2d.sides polygon
+                , radius = Quantity.half (RegularPolygon2d.edgeLength polygon)
+                , center = vertex
+                , angle = RegularPolygon2d.angle polygon
+                }
+
+        continuations =
+            RegularPolygon2d.vertices polygon
+                |> List.map createPolygon
+    in
+    fork
+        { external = List.map cross continuations
+        , geometry = List.map RegularPolygon continuations
+        }

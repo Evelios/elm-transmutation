@@ -105,6 +105,31 @@ internalRadius =
         ]
 
 
+edgeLength : Test
+edgeLength =
+    describe "The edge length should be"
+        [ test "Should be twice the internal radius for a square" <|
+            \_ ->
+                let
+                    polygon =
+                        RegularPolygon2d.fromUnsafe
+                            { sides = 4
+                            , radius = Length.meters 1
+                            , angle = Angle.degrees 0
+                            , center = Point2d.origin
+                            }
+
+                    actual =
+                        polygon
+                            |> RegularPolygon2d.edgeLength
+
+                    expected =
+                        Quantity.twice (RegularPolygon2d.internalRadius polygon)
+                in
+                Expect.quantityWithin (Length.meters 0.001) expected actual
+        ]
+
+
 vertices : Test
 vertices =
     describe "The vertices"

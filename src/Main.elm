@@ -109,7 +109,7 @@ view model =
                 , Html.Attributes.style "height" "100%"
                 ]
                 [ startingPolygonSvg
-                , Visualize.transmutation <| Transmutation.cross startingPolygon
+                , Visualize.transmutation <| Transmutation.vertexFork startingPolygon
                 ]
     in
     Html.div [] [ svg ]

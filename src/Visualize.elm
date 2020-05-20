@@ -18,9 +18,10 @@ transmutation trans =
         attributes =
             [ TypedSvg.Attributes.InPx.strokeWidth 0.01
             , TypedSvg.Attributes.stroke <| Paint Color.black
+            , TypedSvg.Attributes.noFill
             ]
     in
-    Transmutation.geometry trans
+    Transmutation.getGeometry trans
         |> List.map (geometryToSvg attributes)
         |> Svg.svg []
 
