@@ -3,7 +3,7 @@ module RegularPolygon2d exposing
     , from, fromUnsafe
     , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength
     , asPolygon2d
-    , scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
+    , scale, withRadius, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
     )
 
 {-| A 2d regular polygon module. Regular polygons are polygons with a certain number of vertices and sides where all
@@ -32,7 +32,7 @@ the sides are equal length and the internal angles are equivalent.
 
 # Modifiers
 
-@docs scale, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
+@docs scale, withRadius, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
 
 @ docs scale
 
@@ -216,6 +216,15 @@ scale amount polygon =
     case polygon of
         RegularPolygon2d records ->
             fromUnsafe { records | radius = Quantity.multiplyBy amount records.radius }
+
+
+{-| Set the radius of the regular polygon to a new radius.
+-}
+withRadius : Quantity Float units -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+withRadius theRadius polygon =
+    case polygon of
+        RegularPolygon2d records ->
+            fromUnsafe { records | radius = theRadius }
 
 
 {-| Rotate the regular polygon about the center point.
