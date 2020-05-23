@@ -1,21 +1,25 @@
-module Transmutation exposing (Transmutation, cross, getGeometry, midpointInset, vertexFork)
+module Transmutation exposing
+    ( Transmutation
+    , getGeometry
+    , cross, vertexFork, midpointInset, midpointInsetAndFork
+    )
 
 {-|
 
 
 # Types
 
-@ docs Transmutation
+@docs Transmutation
 
 
 # Accessors
 
-@ getGeometry
+@docs getGeometry
 
 
 # Transmutation functions
 
-@ cross, vertexFork, midpointInset
+@docs cross, vertexFork, midpointInset, midpointInsetAndFork
 
 -}
 
@@ -32,6 +36,7 @@ type Transmutation units coordinates
     = Terminal (List (Geometry units coordinates))
     | Fork (List (Geometry units coordinates)) (List (Transmutation units coordinates))
     | Internal (List (Geometry units coordinates)) (Transmutation units coordinates)
+    | ForkWithInternal (List (Geometry units coordinates)) (List (Transmutation units coordinates)) (Transmutation units coordinates)
 
 
 
@@ -61,6 +66,16 @@ internal { geometry, internalTransmutation } =
     Internal geometry internalTransmutation
 
 
+forkWithInternal :
+    { geometry : List (Geometry units coordinates)
+    , externalTransmutations : List (Transmutation units coordinates)
+    , internalTransmutation : Transmutation units coordinates
+    }
+    -> Transmutation units coordinates
+forkWithInternal { geometry, externalTransmutations, internalTransmutation } =
+    ForkWithInternal geometry externalTransmutations internalTransmutation
+
+
 
 -------- Accessors
 
@@ -78,6 +93,11 @@ getGeometry transmutation =
 
         Internal geometry internalTransmutation ->
             List.append geometry <| getGeometry internalTransmutation
+
+        ForkWithInternal geometry externalTransmutations internalTransmutation ->
+            geometry
+                |> List.append (List.concat (List.map getGeometry externalTransmutations))
+                |> List.append (getGeometry internalTransmutation)
 
 
 
@@ -131,4 +151,37 @@ midpointInset polygon =
     internal
         { geometry = [ RegularPolygon rotatedInset ]
         , internalTransmutation = cross rotatedInset
+        }
+
+
+midpointInsetAndFork : RegularPolygon2d units coordinates -> Transmutation units coordinates
+midpointInsetAndFork polygon =
+    let
+        rotatedInset =
+            polygon
+                |> RegularPolygon2d.withRadius (RegularPolygon2d.internalRadius polygon)
+                |> RegularPolygon2d.rotateHalfExteriorAngle
+
+        forkRadius =
+            RegularPolygon2d.radius polygon |> Quantity.minus (RegularPolygon2d.internalRadius rotatedInset)
+
+        forkPolygon vertex =
+            RegularPolygon2d.fromUnsafe
+                { sides = RegularPolygon2d.sides polygon
+                , radius = forkRadius
+                , center = vertex
+                , angle = RegularPolygon2d.angle (RegularPolygon2d.rotateHalfExteriorAngle polygon)
+                }
+
+        forks =
+            RegularPolygon2d.vertices polygon
+                |> List.map forkPolygon
+
+        geometry =
+            RegularPolygon rotatedInset :: List.map RegularPolygon forks
+    in
+    forkWithInternal
+        { externalTransmutations = List.map cross forks
+        , internalTransmutation = cross rotatedInset
+        , geometry = geometry
         }
