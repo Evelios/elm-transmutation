@@ -47,16 +47,20 @@ type Transmutation units coordinates
         }
     | Internal
         { geometry : List (Geometry units coordinates)
-        , internalTransmutation : Transmutation units coordinates
+        , internalContinuation : RegularPolygon2d units coordinates
+        , internalTransmutation : Maybe (Transmutation units coordinates)
         }
     | Fork
         { geometry : List (Geometry units coordinates)
+        , forkContinuations : List (RegularPolygon2d units coordinates)
         , forkTransmutations : List (Transmutation units coordinates)
         }
     | ForkWithInternal
         { geometry : List (Geometry units coordinates)
+        , internalContinuation : RegularPolygon2d units coordinates
+        , internalTransmutation : Maybe (Transmutation units coordinates)
+        , forkContinuations : List (RegularPolygon2d units coordinates)
         , forkTransmutations : List (Transmutation units coordinates)
-        , internalTransmutation : Transmutation units coordinates
         }
 
 
@@ -71,30 +75,44 @@ terminal geometry =
 
 forkWith :
     { geometry : List (Geometry units coordinates)
-    , forkTransmutations : List (Transmutation units coordinates)
+    , forkContinuations : List (RegularPolygon2d units coordinates)
     }
     -> Transmutation units coordinates
-forkWith =
+forkWith { geometry, forkContinuations } =
     Fork
+        { geometry = geometry
+        , forkContinuations = forkContinuations
+        , forkTransmutations = []
+        }
 
 
 internalWith :
     { geometry : List (Geometry units coordinates)
-    , internalTransmutation : Transmutation units coordinates
+    , internalContinuation : RegularPolygon2d units coordinates
     }
     -> Transmutation units coordinates
-internalWith =
+internalWith { geometry, internalContinuation } =
     Internal
+        { geometry = geometry
+        , internalContinuation = internalContinuation
+        , internalTransmutation = Nothing
+        }
 
 
 forkAndInternalWith :
     { geometry : List (Geometry units coordinates)
-    , forkTransmutations : List (Transmutation units coordinates)
-    , internalTransmutation : Transmutation units coordinates
+    , forkContinuations : List (RegularPolygon2d units coordinates)
+    , internalContinuation : RegularPolygon2d units coordinates
     }
     -> Transmutation units coordinates
-forkAndInternalWith =
+forkAndInternalWith { geometry, forkContinuations, internalContinuation } =
     ForkWithInternal
+        { geometry = geometry
+        , internalContinuation = internalContinuation
+        , internalTransmutation = Nothing
+        , forkContinuations = forkContinuations
+        , forkTransmutations = []
+        }
 
 
 
@@ -113,12 +131,23 @@ getGeometry transmutation =
             List.append geometry <| List.concat <| List.map getGeometry forkTransmutations
 
         Internal { geometry, internalTransmutation } ->
-            List.append geometry <| getGeometry internalTransmutation
+            case internalTransmutation of
+                Just internal ->
+                    List.append geometry <| getGeometry internal
+
+                Nothing ->
+                    geometry
 
         ForkWithInternal { geometry, forkTransmutations, internalTransmutation } ->
-            geometry
-                |> List.append (List.concat (List.map getGeometry forkTransmutations))
-                |> List.append (getGeometry internalTransmutation)
+            case internalTransmutation of
+                Just internal ->
+                    geometry
+                        |> List.append (List.concat (List.map getGeometry forkTransmutations))
+                        |> List.append (getGeometry internal)
+
+                Nothing ->
+                    geometry
+                        |> List.append (List.concat (List.map getGeometry forkTransmutations))
 
 
 
@@ -188,7 +217,7 @@ vertexFork polygon =
                 |> List.map createPolygon
     in
     forkWith
-        { forkTransmutations = List.map cross continuations
+        { forkContinuations = continuations
         , geometry = List.map RegularPolygon continuations
         }
 
@@ -203,7 +232,7 @@ midpointInset polygon =
     in
     internalWith
         { geometry = [ RegularPolygon rotatedInset ]
-        , internalTransmutation = cross rotatedInset
+        , internalContinuation = rotatedInset
         }
 
 
@@ -234,7 +263,7 @@ midpointInsetAndFork polygon =
             RegularPolygon rotatedInset :: List.map RegularPolygon forks
     in
     forkAndInternalWith
-        { forkTransmutations = []
-        , internalTransmutation = cross rotatedInset
+        { forkContinuations = forks
+        , internalContinuation = rotatedInset
         , geometry = geometry
         }
