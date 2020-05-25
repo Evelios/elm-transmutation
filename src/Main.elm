@@ -10,10 +10,11 @@ import Html.Attributes
 import Pixels exposing (Pixels)
 import Point2d
 import Quantity
-import RegularPolygon2d
+import RegularPolygon2d exposing (RegularPolygon2d)
 import Size exposing (Size)
+import Svg exposing (Svg)
 import Task
-import Transmutation
+import Transmutation exposing (Transmutation)
 import TypedSvg
 import TypedSvg.Attributes
 import TypedSvg.Attributes.InPx
@@ -109,7 +110,12 @@ view model =
                 , Html.Attributes.style "height" "100%"
                 ]
                 [ startingPolygonSvg
-                , Visualize.transmutation <| Transmutation.midpointInsetAndFork startingPolygon
+                , Visualize.transmutation <| generateTransmutation startingPolygon
                 ]
     in
     Html.div [] [ svg ]
+
+
+generateTransmutation : RegularPolygon2d units coordinates -> Transmutation units coordinates
+generateTransmutation startingPolygon =
+    Transmutation.midpointInsetAndFork startingPolygon
