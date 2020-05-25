@@ -1,7 +1,8 @@
 module Transmutation exposing
     ( Transmutation
-    , getGeometry
     , terminal, forkWith, internalWith, forkAndInternalWith
+    , withInternal, withFork
+    , getGeometry
     , all, allForks, allInternals, allForksWithInternals
     , cross, vertexFork, midpointInset, midpointInsetAndFork
     )
@@ -14,14 +15,19 @@ module Transmutation exposing
 @docs Transmutation
 
 
-# Accessors
+# Builders
 
-@docs getGeometry
+@docs terminal, forkWith, internalWith, forkAndInternalWith
 
 
 # Modifiers
 
-@docs terminal, forkWith, internalWith, forkAndInternalWith
+@docs withInternal, withFork
+
+
+# Accessors
+
+@docs getGeometry
 
 
 # Transmutation functions
@@ -65,7 +71,7 @@ type Transmutation units coordinates
 
 
 
--------- Building
+-------- Builders
 
 
 terminal : List (Geometry units coordinates) -> Transmutation units coordinates
@@ -113,6 +119,48 @@ forkAndInternalWith { geometry, forkContinuations, internalContinuation } =
         , forkContinuations = forkContinuations
         , forkTransmutations = []
         }
+
+
+
+-------- Modifiers
+
+
+withInternal :
+    (RegularPolygon2d units coordinates -> Transmutation units coordinates)
+    -> Transmutation units coordinates
+    -> Transmutation units coordinates
+withInternal algorithm transmutation =
+    case transmutation of
+        Terminal _ ->
+            transmutation
+
+        Internal records ->
+            Internal { records | internalTransmutation = Just (algorithm records.internalContinuation) }
+
+        Fork _ ->
+            transmutation
+
+        ForkWithInternal records ->
+            ForkWithInternal { records | internalTransmutation = Just (algorithm records.internalContinuation) }
+
+
+withFork :
+    (RegularPolygon2d units coordinates -> Transmutation units coordinates)
+    -> Transmutation units coordinates
+    -> Transmutation units coordinates
+withFork algorithm transmutation =
+    case transmutation of
+        Terminal _ ->
+            transmutation
+
+        Internal _ ->
+            transmutation
+
+        Fork records ->
+            Fork { records | forkTransmutations = List.map algorithm records.forkContinuations }
+
+        ForkWithInternal records ->
+            ForkWithInternal { records | forkTransmutations = List.map algorithm records.forkContinuations }
 
 
 

@@ -119,3 +119,5 @@ view model =
 generateTransmutation : RegularPolygon2d units coordinates -> Transmutation units coordinates
 generateTransmutation startingPolygon =
     Transmutation.midpointInsetAndFork startingPolygon
+        |> Transmutation.withInternal Transmutation.midpointInsetAndFork
+        |> Transmutation.withFork Transmutation.midpointInsetAndFork
