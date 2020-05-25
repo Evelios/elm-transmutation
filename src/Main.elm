@@ -9,12 +9,13 @@ import Html exposing (Html)
 import Html.Attributes
 import Pixels exposing (Pixels)
 import Point2d
-import Quantity
+import Quantity exposing (Unitless)
+import Random
 import RegularPolygon2d exposing (RegularPolygon2d)
 import Size exposing (Size)
-import Svg exposing (Svg)
 import Task
 import Transmutation exposing (Transmutation)
+import Transmutation.Generate
 import TypedSvg
 import TypedSvg.Attributes
 import TypedSvg.Attributes.InPx
@@ -22,13 +23,19 @@ import TypedSvg.Types exposing (Paint(..))
 import Visualize
 
 
+type YDownCoordinates
+    = YDownCoordinates
+
+
 type Msg
     = GotViewport Browser.Dom.Viewport
     | WindowResize ( Float, Float )
+    | NewTransmutation (Transmutation Unitless YDownCoordinates)
 
 
 type alias Model =
     { view : Size Pixels
+    , transmutation : Maybe (Transmutation Unitless YDownCoordinates)
     }
 
 
@@ -45,8 +52,11 @@ main =
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { view = Size.size Quantity.zero Quantity.zero
+      , transmutation = Nothing
       }
-    , Task.perform GotViewport Browser.Dom.getViewport
+    , Cmd.batch
+        [ Task.perform GotViewport Browser.Dom.getViewport
+        ]
     )
 
 
@@ -54,28 +64,41 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotViewport { scene, viewport } ->
-            ( { model
-                | view =
-                    Size.size
-                        (Pixels.pixels viewport.width)
-                        (Pixels.pixels viewport.height)
-              }
-            , Cmd.none
+            let
+                newModel =
+                    { model
+                        | view =
+                            Size.size
+                                (Pixels.pixels viewport.width)
+                                (Pixels.pixels viewport.height)
+                    }
+            in
+            ( newModel
+            , generateTransmutation newModel
             )
 
         WindowResize ( width, height ) ->
-            ( { model
-                | view =
-                    Size.size
-                        (Pixels.pixels width)
-                        (Pixels.pixels height)
-              }
+            let
+                newModel =
+                    { model
+                        | view =
+                            Size.size
+                                (Pixels.pixels width)
+                                (Pixels.pixels height)
+                    }
+            in
+            ( newModel
+            , Cmd.none
+            )
+
+        NewTransmutation transmutation ->
+            ( { model | transmutation = Just transmutation }
             , Cmd.none
             )
 
 
-view : Model -> Html Msg
-view model =
+generateTransmutation : Model -> Cmd Msg
+generateTransmutation model =
     let
         aspectRatio =
             AspectRatio.fromSize model.view
@@ -93,31 +116,58 @@ view model =
                 , center = center
                 , angle = Quantity.zero
                 }
-
-        startingPolygonSvg =
-            startingPolygon
-                |> RegularPolygon2d.asPolygon2d
-                |> Geometry.Svg.polygon2d
-                    [ TypedSvg.Attributes.stroke <| Paint Color.black
-                    , TypedSvg.Attributes.InPx.strokeWidth 0.01
-                    , TypedSvg.Attributes.noFill
-                    ]
-
-        svg =
-            TypedSvg.svg
-                [ TypedSvg.Attributes.viewBox 0 0 aspectRatio.x aspectRatio.y
-                , Html.Attributes.style "width" "100%"
-                , Html.Attributes.style "height" "100%"
-                ]
-                [ startingPolygonSvg
-                , Visualize.transmutation <| generateTransmutation startingPolygon
-                ]
     in
-    Html.div [] [ svg ]
+    Transmutation.Generate.transmutation
+        { startingAlgorithm = Transmutation.midpointInsetAndFork
+        , algorithms = [ Transmutation.cross ]
+        , startingPolygon = startingPolygon
+        , terminalCondition = \_ -> True
+        }
+        |> Random.generate NewTransmutation
 
 
-generateTransmutation : RegularPolygon2d units coordinates -> Transmutation units coordinates
-generateTransmutation startingPolygon =
-    Transmutation.midpointInsetAndFork startingPolygon
-        |> Transmutation.withInternal Transmutation.midpointInsetAndFork
-        |> Transmutation.withFork Transmutation.midpointInsetAndFork
+view : Model -> Html Msg
+view model =
+    case model.transmutation of
+        Just transmutation ->
+            let
+                aspectRatio =
+                    AspectRatio.fromSize model.view
+
+                center =
+                    Point2d.xy (Quantity.float <| AspectRatio.x aspectRatio / 2) (Quantity.float <| AspectRatio.y aspectRatio / 2)
+
+                radius =
+                    Quantity.float <| 0.4 * min (AspectRatio.x aspectRatio) (AspectRatio.y aspectRatio)
+
+                startingPolygon =
+                    RegularPolygon2d.fromUnsafe
+                        { sides = 5
+                        , radius = radius
+                        , center = center
+                        , angle = Quantity.zero
+                        }
+
+                startingPolygonSvg =
+                    startingPolygon
+                        |> RegularPolygon2d.asPolygon2d
+                        |> Geometry.Svg.polygon2d
+                            [ TypedSvg.Attributes.stroke <| Paint Color.black
+                            , TypedSvg.Attributes.InPx.strokeWidth 0.01
+                            , TypedSvg.Attributes.noFill
+                            ]
+
+                svg =
+                    TypedSvg.svg
+                        [ TypedSvg.Attributes.viewBox 0 0 aspectRatio.x aspectRatio.y
+                        , Html.Attributes.style "width" "100%"
+                        , Html.Attributes.style "height" "100%"
+                        ]
+                        [ startingPolygonSvg
+                        , Visualize.transmutation transmutation
+                        ]
+            in
+            Html.div [] [ svg ]
+
+        Nothing ->
+            Html.div [] []
