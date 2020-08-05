@@ -1,14 +1,13 @@
 module RegularPolygon2d exposing
     ( RegularPolygon2d
     , from, fromUnsafe
-    , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength
+    , sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength, boundingBox
     , asPolygon2d
-    , scale, withRadius, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
+    , scale, scaleAbout, translateBy, withRadius, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
     )
 
 {-| A 2d regular polygon module. Regular polygons are polygons with a certain number of vertices and sides where all
 the sides are equal length and the internal angles are equivalent.
-
 
 # Type
 
@@ -22,7 +21,7 @@ the sides are equal length and the internal angles are equivalent.
 
 # Accessors
 
-@docs sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength
+@docs sides, radius, internalRadius, angle, center, vertices, midpoints, exteriorAngle, edgeLength, boundingBox
 
 
 # Conversions
@@ -32,18 +31,19 @@ the sides are equal length and the internal angles are equivalent.
 
 # Modifiers
 
-@docs scale, withRadius, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
+@docs scale, scaleAbout, translateBy, withRadius, rotateRelativeToExteriorAngle, rotateHalfExteriorAngle
 
 @ docs scale
 
 -}
 
 import Angle exposing (Angle)
+import BoundingBox2d as Boundingbox2d exposing (BoundingBox2d)
 import List.Util
 import Point2d exposing (Point2d)
 import Polygon2d exposing (Polygon2d)
 import Quantity exposing (Quantity)
-import Vector2d
+import Vector2d exposing (Vector2d)
 
 
 
@@ -175,6 +175,18 @@ vertices polygon =
     pointsWithRadiusAndAngle (radius polygon) (angle polygon) polygon
 
 
+{-| Get the bounding box of the regular polygon.
+-}
+boundingBox : RegularPolygon2d units coordinates -> BoundingBox2d units coordinates
+boundingBox polygon =
+    case vertices polygon of
+        first :: rest ->
+            Boundingbox2d.hull first rest
+
+        [] ->
+            Boundingbox2d.singleton Point2d.origin
+
+
 {-| Get the midpoints of the polygon vertices. The first vertex is the point that is at the angle of the polygon. The
 midpoints go counter clockwise around the polygon.
 -}
@@ -212,28 +224,38 @@ asPolygon2d regularPolygon =
 {-| Scale the regular polygon about the center point.
 -}
 scale : Float -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
-scale amount polygon =
+scale amount (RegularPolygon2d records) =
+    fromUnsafe { records | radius = Quantity.multiplyBy amount records.radius }
+
+
+{-| Scale the regular polygon about a particular point.
+-}
+scaleAbout : Point2d units coordinates -> Float -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+scaleAbout point amount polygon =
     case polygon of
         RegularPolygon2d records ->
-            fromUnsafe { records | radius = Quantity.multiplyBy amount records.radius }
+            polygon
+                |> translateBy (Vector2d.from point records.center |> Vector2d.scaleBy amount)
+                |> scale amount
+
+
+translateBy : Vector2d units coordinates -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
+translateBy amount (RegularPolygon2d records) =
+    fromUnsafe { records | center = Point2d.translateBy amount records.center }
 
 
 {-| Set the radius of the regular polygon to a new radius.
 -}
 withRadius : Quantity Float units -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
-withRadius theRadius polygon =
-    case polygon of
-        RegularPolygon2d records ->
-            fromUnsafe { records | radius = theRadius }
+withRadius theRadius (RegularPolygon2d records) =
+    fromUnsafe { records | radius = theRadius }
 
 
 {-| Rotate the regular polygon about the center point.
 -}
 rotate : Angle -> RegularPolygon2d units coordinates -> RegularPolygon2d units coordinates
-rotate amount polygon =
-    case polygon of
-        RegularPolygon2d records ->
-            fromUnsafe { records | angle = Quantity.plus amount records.angle }
+rotate amount (RegularPolygon2d records) =
+    fromUnsafe { records | angle = Quantity.plus amount records.angle }
 
 
 {-| Rotate the regular polygon relative to the exterior angle. The exterior angle is the angle of each individual wedge

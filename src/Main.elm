@@ -1,41 +1,32 @@
 module Main exposing (main)
 
-import AspectRatio
 import Browser
 import Browser.Dom
-import Color
-import Geometry.Svg
 import Html exposing (Html)
-import Html.Attributes
 import Pixels exposing (Pixels)
-import Point2d
 import Quantity exposing (Unitless)
 import Random
-import RegularPolygon2d exposing (RegularPolygon2d)
+import Render
 import Size exposing (Size)
 import Task
 import Transmutation exposing (Transmutation)
-import Transmutation.Generate
-import TypedSvg
-import TypedSvg.Attributes
-import TypedSvg.Attributes.InPx
-import TypedSvg.Types exposing (Paint(..))
-import Visualize
+import Transmutation.Generate as Generate
 
 
-type YDownCoordinates
-    = YDownCoordinates
+type Cartesian
+    = Cartesian
 
 
 type Msg
     = GotViewport Browser.Dom.Viewport
     | WindowResize ( Float, Float )
-    | NewTransmutation (Transmutation Unitless YDownCoordinates)
+    | GenerateTransmutation
+    | NewTransmutation (Transmutation Unitless Cartesian)
 
 
 type alias Model =
     { view : Size Pixels
-    , transmutation : Maybe (Transmutation Unitless YDownCoordinates)
+    , transmutation : Maybe (Transmutation Unitless Cartesian)
     }
 
 
@@ -73,9 +64,8 @@ update msg model =
                                 (Pixels.pixels viewport.height)
                     }
             in
-            ( newModel
-            , generateTransmutation newModel
-            )
+            newModel
+                |> update GenerateTransmutation
 
         WindowResize ( width, height ) ->
             let
@@ -91,83 +81,22 @@ update msg model =
             , Cmd.none
             )
 
+        GenerateTransmutation ->
+            ( model
+            , Random.generate NewTransmutation (Generate.transmutation Generate.transmutationDefault)
+            )
+
         NewTransmutation transmutation ->
             ( { model | transmutation = Just transmutation }
             , Cmd.none
             )
 
 
-generateTransmutation : Model -> Cmd Msg
-generateTransmutation model =
-    let
-        aspectRatio =
-            AspectRatio.fromSize model.view
-
-        center =
-            Point2d.xy (Quantity.float <| AspectRatio.x aspectRatio / 2) (Quantity.float <| AspectRatio.y aspectRatio / 2)
-
-        radius =
-            Quantity.float <| 0.4 * min (AspectRatio.x aspectRatio) (AspectRatio.y aspectRatio)
-
-        startingPolygon =
-            RegularPolygon2d.fromUnsafe
-                { sides = 5
-                , radius = radius
-                , center = center
-                , angle = Quantity.zero
-                }
-    in
-    Transmutation.Generate.transmutation
-        { startingAlgorithm = Transmutation.midpointInsetAndFork
-        , algorithms = [ Transmutation.cross ]
-        , startingPolygon = startingPolygon
-        , terminalCondition = \_ -> True
-        }
-        |> Random.generate NewTransmutation
-
-
 view : Model -> Html Msg
 view model =
     case model.transmutation of
         Just transmutation ->
-            let
-                aspectRatio =
-                    AspectRatio.fromSize model.view
-
-                center =
-                    Point2d.xy (Quantity.float <| AspectRatio.x aspectRatio / 2) (Quantity.float <| AspectRatio.y aspectRatio / 2)
-
-                radius =
-                    Quantity.float <| 0.4 * min (AspectRatio.x aspectRatio) (AspectRatio.y aspectRatio)
-
-                startingPolygon =
-                    RegularPolygon2d.fromUnsafe
-                        { sides = 5
-                        , radius = radius
-                        , center = center
-                        , angle = Quantity.zero
-                        }
-
-                startingPolygonSvg =
-                    startingPolygon
-                        |> RegularPolygon2d.asPolygon2d
-                        |> Geometry.Svg.polygon2d
-                            [ TypedSvg.Attributes.stroke <| Paint Color.black
-                            , TypedSvg.Attributes.InPx.strokeWidth 0.01
-                            , TypedSvg.Attributes.noFill
-                            ]
-
-                svg =
-                    TypedSvg.svg
-                        [ TypedSvg.Attributes.viewBox 0 0 aspectRatio.x aspectRatio.y
-                        , Html.Attributes.style "width" "100%"
-                        , Html.Attributes.style "height" "100%"
-                        ]
-                        [ startingPolygonSvg
-                        , Visualize.transmutation transmutation
-                        ]
-            in
-            Html.div [] [ svg ]
+            Render.transmutation transmutation
 
         Nothing ->
             Html.div [] []

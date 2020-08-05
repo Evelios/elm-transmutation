@@ -22,7 +22,7 @@ module Transmutation exposing
 
 # Modifiers
 
-@docs withInternal, withFork
+@docs withInternal, withFork, normalize
 
 
 # Accessors
@@ -38,36 +38,48 @@ module Transmutation exposing
 
 -}
 
+import BoundingBox2d exposing (BoundingBox2d)
 import Geometry exposing (Geometry(..))
 import LineSegment2d
 import List.Extra
 import List.Util
-import Quantity
+import Point2d exposing (Point2d)
+import Quantity exposing (Unitless)
 import RegularPolygon2d exposing (RegularPolygon2d)
+
+
+type alias Model units coordinates a =
+    { a
+        | geometry : List (Geometry units coordinates)
+    }
 
 
 {-| -}
 type Transmutation units coordinates
-    = Terminal
-        { geometry : List (Geometry units coordinates)
-        }
+    = Terminal (Model units coordinates {})
     | Internal
-        { geometry : List (Geometry units coordinates)
-        , internalContinuation : RegularPolygon2d units coordinates
-        , internalTransmutation : Maybe (Transmutation units coordinates)
-        }
+        (Model units
+            coordinates
+            { internalContinuation : RegularPolygon2d units coordinates
+            , internalTransmutation : Maybe (Transmutation units coordinates)
+            }
+        )
     | Fork
-        { geometry : List (Geometry units coordinates)
-        , forkContinuations : List (RegularPolygon2d units coordinates)
-        , forkTransmutations : List (Transmutation units coordinates)
-        }
+        (Model units
+            coordinates
+            { forkContinuations : List (RegularPolygon2d units coordinates)
+            , forkTransmutations : List (Transmutation units coordinates)
+            }
+        )
     | ForkWithInternal
-        { geometry : List (Geometry units coordinates)
-        , internalContinuation : RegularPolygon2d units coordinates
-        , internalTransmutation : Maybe (Transmutation units coordinates)
-        , forkContinuations : List (RegularPolygon2d units coordinates)
-        , forkTransmutations : List (Transmutation units coordinates)
-        }
+        (Model units
+            coordinates
+            { internalContinuation : RegularPolygon2d units coordinates
+            , internalTransmutation : Maybe (Transmutation units coordinates)
+            , forkContinuations : List (RegularPolygon2d units coordinates)
+            , forkTransmutations : List (Transmutation units coordinates)
+            }
+        )
 
 
 
@@ -163,6 +175,47 @@ withFork algorithm transmutation =
             ForkWithInternal { records | forkTransmutations = List.map algorithm records.forkContinuations }
 
 
+{-| Apply a function to the geometry of each element within the transmutation.
+-}
+apply :
+    (Geometry units coordinates -> Geometry units coordinates)
+    -> Transmutation units coordinates
+    -> Transmutation units coordinates
+apply modification transmutation =
+    case transmutation of
+        Terminal model ->
+            Terminal { model | geometry = List.map modification model.geometry }
+
+        Internal model ->
+            Internal
+                { model
+                    | geometry = List.map modification model.geometry
+                    , internalTransmutation = Maybe.map (apply modification) model.internalTransmutation
+                }
+
+        Fork model ->
+            Fork
+                { model
+                    | geometry = List.map modification model.geometry
+                    , forkTransmutations = List.map (apply modification) model.forkTransmutations
+                }
+
+        ForkWithInternal model ->
+            ForkWithInternal
+                { model
+                    | geometry = List.map modification model.geometry
+                    , internalTransmutation = Maybe.map (apply modification) model.internalTransmutation
+                    , forkTransmutations = List.map (apply modification) model.forkTransmutations
+                }
+
+
+{-| Scale the transmutation by a particular amount
+-}
+scaleAbout : Point2d units coordinates -> Float -> Transmutation units coordinates -> Transmutation units coordinates
+scaleAbout point amount =
+    apply <| Geometry.scaleAbout point amount
+
+
 
 -------- Accessors
 
@@ -196,6 +249,21 @@ getGeometry transmutation =
                 Nothing ->
                     geometry
                         |> List.append (List.concat (List.map getGeometry forkTransmutations))
+
+
+boundingBox : Transmutation units coordinates -> BoundingBox2d units coordinates
+boundingBox transmutation =
+    case getGeometry transmutation of
+        first :: rest ->
+            BoundingBox2d.aggregateOf Geometry.boundingBox first rest
+
+        [] ->
+            BoundingBox2d.singleton Point2d.origin
+
+
+center : Transmutation units coordinates -> Point2d units coordinates
+center transmutation =
+    BoundingBox2d.centerPoint <| boundingBox transmutation
 
 
 
