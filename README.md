@@ -1,16 +1,16 @@
 # Transmutations
 
-| Name                    | Image |
-|-------------------------|---|
-| Cage                    | ![Cage](img/cage.svg) |
-| Double Vertices         | ![Double Vertices](img/double_verticies.svg) |
-| Forked Inset            | ![Forked Inset](img/forked_inset.svg) |
-| Gem                     | ![Gem](img/gem.svg) |
-| Inset Gem               | ![Inset Gem](img/inset_gem.svg) |
-| Looking Glass           | ![Looking Glass](img/lookingglass.svg) |
-| Midpoint Inset And Fork | ![Midpoint Inset And Fork](img/midpointInsetAndFork.svg) |
-| Ring                    | ![Ring](img/ring.svg) |
-| Rock                    | ![Rock](img/rock.svg) |
-| Spyglass                | ![Spyglass](img/spyglass.svg) |
-| Twisted Inset           | ![Twisted Inset](img/twisted_inset.svg) |
-| Vertex Fork             | ![Vertex Fork](img/vertexFork.svg) |
+| Image| Name |
+|---|---|
+| ![Cage](img/cage.svg) | Cage|
+| ![Double Vertices](img/double_verticies.svg) |Double Vertices|
+| ![Forked Inset](img/forked_inset.svg) |Forked Inset|
+| ![Gem](img/gem.svg) |Gem|
+| ![Inset Gem](img/inset_gem.svg) |Inset Gem|
+| ![Looking Glass](img/lookingglass.svg) |Looking Glass|
+| ![Midpoint Inset And Fork](img/midpointInsetAndFork.svg) | Midpoint Inset And Fork |
+| ![Ring](img/ring.svg) |Ring|
+| ![Rock](img/rock.svg) |Rock|
+| ![Spyglass](img/spyglass.svg) |Spyglass|
+| ![Twisted Inset](img/twisted_inset.svg) |Twisted Inset|
+| ![Vertex Fork](img/vertexFork.svg) |Vertex Fork|
